@@ -1,0 +1,23 @@
+name: "faq-to-discord"
+description: "Syncs faq markdown entries to a discord channel"
+author: "zulien"
+inputs:
+  website_base_url:
+    description: "Base url for the wiki site."
+    required: true
+  faq_glob:
+    description: "FAQ glob inside the repo such as faq/**.md."
+    required: true
+  slug_replace_path:
+    description: "Slug path to replace file path. If the content is in content/en/faqs and website slugs are website.com/faqs, then content/en should be provied."
+    required: true
+    default: "content/en"
+  discord_token:
+    description: "Discord bot token."
+    required: true
+  discord_channel:
+    description: "Discord channel to sync faq changes to."
+    required: true
+runs:
+  using: "node12"
+  main: "dist/index.js"
