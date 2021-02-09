@@ -1,13 +1,6 @@
 import { Collection, Message, TextChannel } from "discord.js";
-
-export async function wipeChannel(channel: TextChannel) {
-  let fetched: Collection<string, Message>;
-  do {
-    fetched = await channel.messages.fetch({ limit: 100 });
-    await channel.bulkDelete(fetched);
-  } while (fetched.size >= 2);
-}
-
+export const MAX_INDICES_IN_AN_EMBED = 10
+export const MAX_TRUNCATE_LENGTH = 1700
 export class Color {
   private _next = 0;
   static readonly options = {
@@ -47,4 +40,13 @@ export function truncate(text: string, max: number, suffix: string) {
         0,
         text.substr(0, max - suffix.length).lastIndexOf(" ")
       )}${suffix}`;
+}
+
+export function countMessagesRequired<T>(items: T[]) {
+  const indexCount = Math.ceil(items.length / MAX_INDICES_IN_AN_EMBED)
+  return indexCount + items.length + 1
+}
+
+export function last<T>(items: T[]) {
+  return items[items.length - 1]
 }

@@ -4,14 +4,20 @@ import * as glob from "@actions/glob";
 import { readFileSync } from "fs";
 import matter from "gray-matter";
 import { basename, extname, parse } from "path";
-import { Color, truncate, wipeChannel } from "./util";
+import {
+  Color,
+  truncate,
+  countMessagesRequired,
+  MAX_INDICES_IN_AN_EMBED,
+  MAX_TRUNCATE_LENGTH,
+  last,
+} from "./util";
 
 async function run() {
   const discordToken = getInput("discord_token");
   const discordChannel = getInput("discord_channel");
   const websiteBaseUrl = getInput("website_base_url");
   const slugReplacePath = getInput("slug_replace_path");
-
   const globber = await glob.create(getInput("faq_glob"), {
     omitBrokenSymbolicLinks: true,
   });
@@ -32,11 +38,12 @@ async function run() {
       )}/${path.name}`;
 
       debug(`Read url for ${file} is at: ${readUrl}`);
+
       return {
         title,
         readUrl,
         description: [
-          truncate(markdown.content, 1800, "..."),
+          truncate(markdown.content, MAX_TRUNCATE_LENGTH, "..."),
           `📰 [Read more](${readUrl})`,
         ].join("\n\n"),
       } as const;
@@ -61,50 +68,120 @@ async function run() {
         throw new Error("Please provide a valid text channel.");
       }
 
-      info(`Wiping channel: ${channel.name} in ${channel.guild.name}`);
-
-      await wipeChannel(channel);
-
-      info(`${channel.name} channel wiped`);
-
-      const sentEmbeds = await Promise.all(
-        embeds.map((embed) => channel.send(embed))
+      info(
+        `Resolving messages in the channel: ${channel.name} in ${channel.guild.name}`
       );
 
-      const messagePaths = sentEmbeds.map((message, index) => {
-        const link = `https://discord.com/channels/${channel.guild.id}/${channel.id}/${message.id}`;
-        const item = items[index];
-        return {
-          link,
-          ...item,
-        } as const;
+      const messages = await channel.messages.fetch({
+        limit: 100, // Upper limit on number of messages can be fetched in one api call.
       });
 
-      info(`Wiki url is at: ${websiteBaseUrl}`);
+      debug(`Found ${messages.size} messages.`);
 
-      const messagePathIndice = messagePaths.reduce<string[]>(
-        (pathIndice, item, index) => {
-          pathIndice.push(`${index + 1}. [${item.title}](${item.link})`);
-          return pathIndice;
-        },
-        []
+      const botMessages = messages.filter(
+        (message) => message.author.id === discordClient.user.id
       );
 
-      const indexEmbed = new MessageEmbed()
-        .setTitle("Discord FAQ")
-        .setDescription(
-          [
+      debug(`${botMessages.size} messages are from bot.`);
+
+      const messagesRequired = countMessagesRequired(embeds);
+
+      debug(`Number of messages required: ${messagesRequired}`);
+
+      if (messagesRequired > botMessages.size) {
+        const pendingMessages = messagesRequired - botMessages.size;
+        debug(`Number of messages required to operate: ${pendingMessages}`);
+
+        const newMessagePromises = new Array(pendingMessages)
+          .fill(0)
+          .map(() => channel.send(new MessageEmbed()));
+
+        const newMessages = await Promise.all(newMessagePromises);
+        debug(`${newMessages.length} messages sent.`);
+
+        for (const newMessage of newMessages) {
+          botMessages.set(newMessage.id, newMessage);
+        }
+      } else if (botMessages.size > messagesRequired) {
+        const messagesToDestroy = botMessages.last(
+          botMessages.size - messagesRequired
+        );
+
+        debug(`Destroying last ${messagesToDestroy.length} messages.`);
+        const messagesToDeletePromises = new Array(messagesToDestroy.length)
+          .fill(0)
+          .map((_, index) => channel.messages.delete(messagesToDestroy[index]));
+        await Promise.all(messagesToDeletePromises);
+
+        for (const messageToDestroy of messagesToDestroy) {
+          botMessages.delete(messageToDestroy.id);
+        }
+
+        debug(`Destroyed last ${messagesToDestroy.length} messages.`);
+      }
+
+      const messagesArray = botMessages.sorted().array();
+      const messagesResetPromises = messagesArray.map((m) =>
+        m.edit("", new MessageEmbed())
+      );
+
+      await Promise.all(messagesResetPromises);
+
+      const embedPaths = messagesArray
+        .slice(0, embeds.length)
+        .map((message, index) => {
+          const link = `https://discord.com/channels/${channel.guild.id}/${channel.id}/${message.id}`;
+          const item = items[index];
+          return {
+            link,
+            ...item,
+          } as const;
+        });
+
+      const embedPathIndices = embedPaths.reduce<string[][]>(
+        (pathIndice, item, index) => {
+          const entry = `${index + 1}. [${item.title}](${item.link})`;
+          if (Array.isArray(last(pathIndice))) {
+            if (last(pathIndice).length >= MAX_INDICES_IN_AN_EMBED) {
+              pathIndice.push([entry]);
+            } else {
+              last(pathIndice).push(entry);
+            }
+          }
+          return pathIndice;
+        },
+        [[]]
+      );
+
+      const indexEmbeds = embedPathIndices.map((items, index) => {
+        const indexEmbed = new MessageEmbed();
+        let inputs = items;
+        if (!index) {
+          indexEmbed.setTitle("Discord FAQ");
+          inputs = [
             "Here are several common questions asked in the server. Click on the link to go to the answer.\n",
-            ...messagePathIndice,
-          ].join("\n")
-        )
-        .setColor(colors.next())
-        .setTimestamp();
+            ...items,
+          ];
+        }
+        return indexEmbed
+          .setDescription(inputs.join("\n"))
+          .setColor(colors.next());
+      });
 
-      await channel.send(indexEmbed);
+      const all = [...embeds, ...indexEmbeds];
+      const allMessagesEditPromises = all.map((embed, index) =>
+        messagesArray[index].edit(embed)
+      );
 
-      await channel.send(
-        `You can find our FAQs on the website here: ${websiteBaseUrl}`
+      await Promise.all(allMessagesEditPromises);
+
+      const lastMessage = messagesArray[messagesArray.length - 1];
+
+      await lastMessage.edit(
+        `You can find our FAQs on the website here: ${websiteBaseUrl}`,
+        {
+          embed: null,
+        }
       );
     } catch (e) {
       discordClient.destroy();

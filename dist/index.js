@@ -40932,7 +40932,7 @@ function run() {
                 title,
                 readUrl,
                 description: [
-                    util_1.truncate(markdown.content, 1800, "..."),
+                    util_1.truncate(markdown.content, util_1.MAX_TRUNCATE_LENGTH, "..."),
                     `📰 [Read more](${readUrl})`,
                 ].join("\n\n"),
             };
@@ -40948,30 +40948,82 @@ function run() {
                 if (!(channel && channel.type === "text")) {
                     throw new Error("Please provide a valid text channel.");
                 }
-                core_1.info(`Wiping channel: ${channel.name} in ${channel.guild.name}`);
-                yield util_1.wipeChannel(channel);
-                core_1.info(`${channel.name} channel wiped`);
-                const sentEmbeds = yield Promise.all(embeds.map((embed) => channel.send(embed)));
-                const messagePaths = sentEmbeds.map((message, index) => {
+                core_1.info(`Resolving messages in the channel: ${channel.name} in ${channel.guild.name}`);
+                const messages = yield channel.messages.fetch({
+                    limit: 100,
+                });
+                core_1.debug(`Found ${messages.size} messages.`);
+                const botMessages = messages.filter((message) => message.author.id === discordClient.user.id);
+                core_1.debug(`${botMessages.size} messages are from bot.`);
+                const messagesRequired = util_1.countMessagesRequired(embeds);
+                core_1.debug(`Number of messages required: ${messagesRequired}`);
+                if (messagesRequired > botMessages.size) {
+                    const pendingMessages = messagesRequired - botMessages.size;
+                    core_1.debug(`Number of messages required to operate: ${pendingMessages}`);
+                    const newMessagePromises = new Array(pendingMessages)
+                        .fill(0)
+                        .map(() => channel.send(new discord_js_1.MessageEmbed()));
+                    const newMessages = yield Promise.all(newMessagePromises);
+                    core_1.debug(`${newMessages.length} messages sent.`);
+                    for (const newMessage of newMessages) {
+                        botMessages.set(newMessage.id, newMessage);
+                    }
+                }
+                else if (botMessages.size > messagesRequired) {
+                    const messagesToDestroy = botMessages.last(botMessages.size - messagesRequired);
+                    core_1.debug(`Destroying last ${messagesToDestroy.length} messages.`);
+                    const messagesToDeletePromises = new Array(messagesToDestroy.length)
+                        .fill(0)
+                        .map((_, index) => channel.messages.delete(messagesToDestroy[index]));
+                    yield Promise.all(messagesToDeletePromises);
+                    for (const messageToDestroy of messagesToDestroy) {
+                        botMessages.delete(messageToDestroy.id);
+                    }
+                    core_1.debug(`Destroyed last ${messagesToDestroy.length} messages.`);
+                }
+                const messagesArray = botMessages.sorted().array();
+                const messagesResetPromises = messagesArray.map((m) => m.edit("", new discord_js_1.MessageEmbed()));
+                yield Promise.all(messagesResetPromises);
+                const embedPaths = messagesArray
+                    .slice(0, embeds.length)
+                    .map((message, index) => {
                     const link = `https://discord.com/channels/${channel.guild.id}/${channel.id}/${message.id}`;
                     const item = items[index];
                     return Object.assign({ link }, item);
                 });
-                core_1.info(`Wiki url is at: ${websiteBaseUrl}`);
-                const messagePathIndice = messagePaths.reduce((pathIndice, item, index) => {
-                    pathIndice.push(`${index + 1}. [${item.title}](${item.link})`);
+                const embedPathIndices = embedPaths.reduce((pathIndice, item, index) => {
+                    const entry = `${index + 1}. [${item.title}](${item.link})`;
+                    if (Array.isArray(util_1.last(pathIndice))) {
+                        if (util_1.last(pathIndice).length >= util_1.MAX_INDICES_IN_AN_EMBED) {
+                            pathIndice.push([entry]);
+                        }
+                        else {
+                            util_1.last(pathIndice).push(entry);
+                        }
+                    }
                     return pathIndice;
-                }, []);
-                const indexEmbed = new discord_js_1.MessageEmbed()
-                    .setTitle("Discord FAQ")
-                    .setDescription([
-                    "Here are several common questions asked in the server. Click on the link to go to the answer.\n",
-                    ...messagePathIndice,
-                ].join("\n"))
-                    .setColor(colors.next())
-                    .setTimestamp();
-                yield channel.send(indexEmbed);
-                yield channel.send(`You can find our FAQs on the website here: ${websiteBaseUrl}`);
+                }, [[]]);
+                const indexEmbeds = embedPathIndices.map((items, index) => {
+                    const indexEmbed = new discord_js_1.MessageEmbed();
+                    let inputs = items;
+                    if (!index) {
+                        indexEmbed.setTitle("Discord FAQ");
+                        inputs = [
+                            "Here are several common questions asked in the server. Click on the link to go to the answer.\n",
+                            ...items,
+                        ];
+                    }
+                    return indexEmbed
+                        .setDescription(inputs.join("\n"))
+                        .setColor(colors.next());
+                });
+                const all = [...embeds, ...indexEmbeds];
+                const allMessagesEditPromises = all.map((embed, index) => messagesArray[index].edit(embed));
+                yield Promise.all(allMessagesEditPromises);
+                const lastMessage = messagesArray[messagesArray.length - 1];
+                yield lastMessage.edit(`You can find our FAQs on the website here: ${websiteBaseUrl}`, {
+                    embed: null,
+                });
             }
             catch (e) {
                 discordClient.destroy();
@@ -40993,31 +41045,14 @@ run().catch((err) => {
 /***/ }),
 
 /***/ 2629:
-/***/ (function(__unused_webpack_module, exports) {
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.truncate = exports.Color = exports.wipeChannel = void 0;
-function wipeChannel(channel) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let fetched;
-        do {
-            fetched = yield channel.messages.fetch({ limit: 100 });
-            yield channel.bulkDelete(fetched);
-        } while (fetched.size >= 2);
-    });
-}
-exports.wipeChannel = wipeChannel;
+exports.last = exports.countMessagesRequired = exports.truncate = exports.Color = exports.MAX_TRUNCATE_LENGTH = exports.MAX_INDICES_IN_AN_EMBED = void 0;
+exports.MAX_INDICES_IN_AN_EMBED = 10;
+exports.MAX_TRUNCATE_LENGTH = 1700;
 class Color {
     constructor() {
         this._next = 0;
@@ -41058,6 +41093,15 @@ function truncate(text, max, suffix) {
         : `${text.substr(0, text.substr(0, max - suffix.length).lastIndexOf(" "))}${suffix}`;
 }
 exports.truncate = truncate;
+function countMessagesRequired(items) {
+    const indexCount = Math.ceil(items.length / exports.MAX_INDICES_IN_AN_EMBED);
+    return indexCount + items.length + 1;
+}
+exports.countMessagesRequired = countMessagesRequired;
+function last(items) {
+    return items[items.length - 1];
+}
+exports.last = last;
 
 
 /***/ }),
