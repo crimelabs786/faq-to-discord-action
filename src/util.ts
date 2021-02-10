@@ -34,11 +34,8 @@ export class Color {
 
 /**
  *
- * @param text - input string
- * @param max - character limit
- * @param suffix - append a string suffix
- *
- * @returns {string} truncated version of text, with no word breaks
+ * @returns truncated version of text, with no word breaks
+ * final output may be smaller than limit size
  *
  * @example
  * Here are a few simple example usages
@@ -66,7 +63,16 @@ export function truncate(text: string, max: number, suffix: string): string {
       )}${suffix}`;
 }
 
-export function countMessagesRequired<T>(items: T[]) {
+/**
+ *
+ * @returns a number of messages need to be sent to Discord
+ * for given n message embeds
+ * Given a set of message embeds, we need to append few more messages
+ * Which contain
+ * - a list of those messages
+ * - a footer message
+ */
+export function countMessagesRequired<T>(items: T[]): number {
   const indexCount = Math.ceil(items.length / MAX_INDICES_IN_AN_EMBED);
   return indexCount + items.length + 1;
 }
