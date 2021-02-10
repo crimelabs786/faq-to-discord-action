@@ -79,7 +79,7 @@ async function run() {
       debug(`Found ${messages.size} messages.`);
 
       const botMessages = messages.filter(
-        (message) => message.author.id === discordClient.user.id
+        (message) => message.author.id === discordClient?.user?.id
       );
 
       debug(`${botMessages.size} messages are from bot.`);

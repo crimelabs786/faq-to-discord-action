@@ -40953,7 +40953,7 @@ function run() {
                     limit: 100,
                 });
                 core_1.debug(`Found ${messages.size} messages.`);
-                const botMessages = messages.filter((message) => message.author.id === discordClient.user.id);
+                const botMessages = messages.filter((message) => { var _a; return message.author.id === ((_a = discordClient === null || discordClient === void 0 ? void 0 : discordClient.user) === null || _a === void 0 ? void 0 : _a.id); });
                 core_1.debug(`${botMessages.size} messages are from bot.`);
                 const messagesRequired = util_1.countMessagesRequired(embeds);
                 core_1.debug(`Number of messages required: ${messagesRequired}`);

@@ -1,6 +1,6 @@
 import { Collection, Message, TextChannel } from "discord.js";
-export const MAX_INDICES_IN_AN_EMBED = 10
-export const MAX_TRUNCATE_LENGTH = 1700
+export const MAX_INDICES_IN_AN_EMBED = 10;
+export const MAX_TRUNCATE_LENGTH = 1700;
 export class Color {
   private _next = 0;
   static readonly options = {
@@ -33,7 +33,7 @@ export class Color {
   }
 }
 
-export function truncate(text: string, max: number, suffix: string) {
+export function truncate(text: string, max: number, suffix: string): string {
   return text.length < max
     ? text
     : `${text.substr(
@@ -43,10 +43,10 @@ export function truncate(text: string, max: number, suffix: string) {
 }
 
 export function countMessagesRequired<T>(items: T[]) {
-  const indexCount = Math.ceil(items.length / MAX_INDICES_IN_AN_EMBED)
-  return indexCount + items.length + 1
+  const indexCount = Math.ceil(items.length / MAX_INDICES_IN_AN_EMBED);
+  return indexCount + items.length + 1;
 }
 
 export function last<T>(items: T[]) {
-  return items[items.length - 1]
+  return items[items.length - 1];
 }
