@@ -4,13 +4,13 @@ import * as glob from "@actions/glob";
 import { readFileSync } from "fs";
 import matter from "gray-matter";
 import { basename, extname, parse } from "path";
+import { last } from "lodash";
 import {
   Color,
   truncate,
   countMessagesRequired,
   MAX_INDICES_IN_AN_EMBED,
   MAX_TRUNCATE_LENGTH,
-  last,
 } from "./util";
 
 async function run() {
@@ -139,16 +139,17 @@ async function run() {
         });
 
       const embedPathIndices = embedPaths.reduce<string[][]>(
-        (pathIndice, item, index) => {
+        (pathIndices, item, index) => {
           const entry = `${index + 1}. [${item.title}](${item.link})`;
-          if (Array.isArray(last(pathIndice))) {
-            if (last(pathIndice).length >= MAX_INDICES_IN_AN_EMBED) {
-              pathIndice.push([entry]);
+          const lastElement = last(pathIndices);
+          if (Array.isArray(lastElement)) {
+            if (lastElement.length >= MAX_INDICES_IN_AN_EMBED) {
+              pathIndices.push([entry]);
             } else {
-              last(pathIndice).push(entry);
+              lastElement.push(entry);
             }
           }
-          return pathIndice;
+          return pathIndices;
         },
         [[]]
       );

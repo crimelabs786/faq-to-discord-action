@@ -1,6 +1,6 @@
 module.exports = {
   parser: "@typescript-eslint/parser",
-  plugins: ["@typescript-eslint", "prettier"],
+  plugins: ["@typescript-eslint", "eslint-plugin-tsdoc", "prettier"],
   env: {
     es6: true,
     node: true,

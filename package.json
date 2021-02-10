@@ -7,6 +7,8 @@
   "license": "MIT",
   "private": true,
   "devDependencies": {
+    "@types/jest": "^26.0.20",
+    "@types/lodash": "^4.14.168",
     "@types/node": "^14.14.22",
     "@typescript-eslint/eslint-plugin": "^4.14.2",
     "@typescript-eslint/parser": "^4.14.2",
@@ -14,6 +16,7 @@
     "eslint": "^7.19.0",
     "eslint-config-prettier": "^7.2.0",
     "eslint-plugin-prettier": "^3.3.1",
+    "eslint-plugin-tsdoc": "^0.2.11",
     "faker": "^5.3.1",
     "husky": "^4.3.8",
     "jest": "^26.6.3",
@@ -36,13 +39,15 @@
   },
   "scripts": {
     "build": "ncc build src/index.ts -o dist",
-    "export": "yarn build && git add dist/index.js"
+    "export": "yarn build && git add dist/index.js",
+    "test": "jest"
   },
   "dependencies": {
     "@actions/core": "^1.2.6",
     "@actions/github": "^4.0.0",
     "@actions/glob": "^0.1.1",
     "discord.js": "^12.5.1",
-    "gray-matter": "^4.0.2"
+    "gray-matter": "^4.0.2",
+    "lodash": "^4.17.20"
   }
 }

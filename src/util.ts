@@ -1,4 +1,3 @@
-import { Collection, Message, TextChannel } from "discord.js";
 export const MAX_INDICES_IN_AN_EMBED = 10;
 export const MAX_TRUNCATE_LENGTH = 1700;
 export class Color {
@@ -33,6 +32,31 @@ export class Color {
   }
 }
 
+/**
+ *
+ * @param text - input string
+ * @param max - character limit
+ * @param suffix - append a string suffix
+ *
+ * @returns {string} truncated version of text, with no word breaks
+ *
+ * @example
+ * Here are a few simple example usages
+ *
+ * 1. when text length is smaller than limit
+ *
+ * ```
+ * // returns "lorem ipsum"
+ * truncate("lorem ipsum", 50, "see more")
+ * ```
+ *
+ * 2. when text lengt is larger than limit
+ *
+ * ```
+ * // return "losee more"
+ * truncate("lorem ipsum", 10, "see more")
+ * ```
+ */
 export function truncate(text: string, max: number, suffix: string): string {
   return text.length < max
     ? text
@@ -45,8 +69,4 @@ export function truncate(text: string, max: number, suffix: string): string {
 export function countMessagesRequired<T>(items: T[]) {
   const indexCount = Math.ceil(items.length / MAX_INDICES_IN_AN_EMBED);
   return indexCount + items.length + 1;
-}
-
-export function last<T>(items: T[]) {
-  return items[items.length - 1];
 }
