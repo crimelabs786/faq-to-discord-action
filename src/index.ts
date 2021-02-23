@@ -4,6 +4,9 @@ import * as glob from "@actions/glob";
 import { readFileSync } from "fs";
 import matter from "gray-matter";
 import { basename, extname, parse } from "path";
+import toMarkdown from "mdast-util-to-markdown";
+import fromMarkdown from "mdast-util-from-markdown";
+
 import {
   Color,
   truncate,
@@ -11,13 +14,13 @@ import {
   MAX_INDICES_IN_AN_EMBED,
   MAX_TRUNCATE_LENGTH,
   last,
+  capitalize,
 } from "./util";
 
 async function run() {
   const discordToken = getInput("discord_token");
   const discordChannel = getInput("discord_channel");
   const websiteBaseUrl = getInput("website_base_url");
-  const slugReplacePath = getInput("slug_replace_path");
   const globber = await glob.create(getInput("faq_glob"), {
     omitBrokenSymbolicLinks: true,
   });
@@ -30,12 +33,26 @@ async function run() {
       const markdown = matter(readFileSync(file, "utf-8"));
       info(`Processing: ${file}`);
 
-      const title: string =
-        markdown.data.title || basename(file, extname(file));
+      let title = capitalize(basename(file, extname(file)).replace("-", " "));
+
+      if (markdown.data.title) {
+        title = markdown.data.title;
+      } else {
+        const mdast = fromMarkdown(markdown.content);
+        if (mdast.children[0].type === "heading") {
+          const value = mdast.children[0].children[0].value;
+          if (typeof value === "string") {
+            title = value;
+          }
+          markdown.content = toMarkdown({
+            ...mdast,
+            children: mdast.children.slice(1),
+          });
+        }
+      }
+
       const path = parse(file.split("/").slice(6).join("/"));
-      const readUrl = `${websiteBaseUrl}${path.dir.slice(
-        slugReplacePath.length
-      )}/${path.name}`;
+      const readUrl = `${websiteBaseUrl}/faqs/${path.name}`;
 
       debug(`Read url for ${file} is at: ${readUrl}`);
 

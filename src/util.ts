@@ -50,3 +50,7 @@ export function countMessagesRequired<T>(items: T[]) {
 export function last<T>(items: T[]) {
   return items[items.length - 1];
 }
+
+export function capitalize(text: string) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

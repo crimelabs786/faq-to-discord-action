@@ -8,10 +8,6 @@ inputs:
   faq_glob:
     description: "FAQ glob inside the repo such as faq/**.md."
     required: true
-  slug_replace_path:
-    description: "Slug path to replace file path. If the content is in content/en/faqs and website slugs are website.com/faqs, then content/en should be provied."
-    required: true
-    default: "content/en"
   discord_token:
     description: "Discord bot token."
     required: true
