@@ -1,4 +1,4 @@
-import { Collection, Message, TextChannel } from "discord.js";
+import { Content } from "mdast";
 export const MAX_INDICES_IN_AN_EMBED = 10;
 export const MAX_TRUNCATE_LENGTH = 1700;
 export class Color {
@@ -53,4 +53,23 @@ export function last<T>(items: T[]) {
 
 export function capitalize(text: string) {
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export function headingToBold(contents: Array<Content>): Array<Content> {
+  return contents.reduce((acc: Array<Content>, content) => {
+    const newChild: Content = content;
+    if (content.type === "heading") {
+      newChild.type = "paragraph";
+      newChild.position = content.position;
+      newChild.children = [
+        {
+          type: "strong",
+          children: [...content.children],
+          position: { ...content.position },
+        },
+      ];
+      return acc.concat([newChild]);
+    }
+    return acc.concat([content]);
+  }, []);
 }

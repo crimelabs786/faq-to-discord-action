@@ -49598,7 +49598,7 @@ function run() {
                     if (typeof value === "string") {
                         title = value;
                     }
-                    markdown.content = mdast_util_to_markdown_1.default(Object.assign(Object.assign({}, mdast), { children: mdast.children.slice(1) }));
+                    markdown.content = mdast_util_to_markdown_1.default(Object.assign(Object.assign({}, mdast), { children: util_1.headingToBold(mdast.children.slice(1)) }));
                 }
             }
             const path = path_1.parse(file.split("/").slice(6).join("/"));
@@ -49726,7 +49726,7 @@ run().catch((err) => {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.capitalize = exports.last = exports.countMessagesRequired = exports.truncate = exports.Color = exports.MAX_TRUNCATE_LENGTH = exports.MAX_INDICES_IN_AN_EMBED = void 0;
+exports.headingToBold = exports.capitalize = exports.last = exports.countMessagesRequired = exports.truncate = exports.Color = exports.MAX_TRUNCATE_LENGTH = exports.MAX_INDICES_IN_AN_EMBED = void 0;
 exports.MAX_INDICES_IN_AN_EMBED = 10;
 exports.MAX_TRUNCATE_LENGTH = 1700;
 class Color {
@@ -49782,6 +49782,25 @@ function capitalize(text) {
     return text.charAt(0).toUpperCase() + text.slice(1);
 }
 exports.capitalize = capitalize;
+function headingToBold(contents) {
+    return contents.reduce((acc, content) => {
+        const newChild = content;
+        if (content.type === "heading") {
+            newChild.type = "paragraph";
+            newChild.position = content.position;
+            newChild.children = [
+                {
+                    type: "strong",
+                    children: [...content.children],
+                    position: Object.assign({}, content.position),
+                },
+            ];
+            return acc.concat([newChild]);
+        }
+        return acc.concat([content]);
+    }, []);
+}
+exports.headingToBold = headingToBold;
 
 
 /***/ }),

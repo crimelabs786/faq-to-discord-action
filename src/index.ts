@@ -15,6 +15,7 @@ import {
   MAX_TRUNCATE_LENGTH,
   last,
   capitalize,
+  headingToBold,
 } from "./util";
 
 async function run() {
@@ -46,7 +47,7 @@ async function run() {
           }
           markdown.content = toMarkdown({
             ...mdast,
-            children: mdast.children.slice(1),
+            children: headingToBold(mdast.children.slice(1)),
           });
         }
       }
